@@ -5,68 +5,40 @@ import com.gamevault.server.dto.GameResponse;
 import com.gamevault.server.dto.UpdateGameRequest;
 import com.gamevault.server.exception.GameNotFoundException;
 import com.gamevault.server.model.Game;
-import com.gamevault.server.model.Genre;
+import com.gamevault.server.repository.GameRepository;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class GameService {
 
-    private final Map<Long, Game> games =
-            new LinkedHashMap<>();
+    private final GameRepository gameRepository;
 
-    private final AtomicLong idSequence =
-            new AtomicLong(0);
+    public GameService(
+            GameRepository gameRepository
+    ) {
 
-    public GameService() {
-
-        create(new CreateGameRequest(
-                "Cyber Samurai",
-                "Cyberpunk action game",
-                new BigDecimal("79.99"),
-                Genre.ACTION
-        ));
-
-        create(new CreateGameRequest(
-                "Dead Sector",
-                "Survival horror game",
-                new BigDecimal("129.99"),
-                Genre.HORROR
-        ));
-
-        create(new CreateGameRequest(
-                "Dungeon Protocol",
-                "Dark fantasy RPG",
-                new BigDecimal("59.99"),
-                Genre.RPG
-        ));
+        this.gameRepository = gameRepository;
     }
 
     public List<GameResponse> getAll() {
 
-        List<GameResponse> result =
-                new ArrayList<>();
-
-        for (Game game : games.values()) {
-            result.add(toResponse(game));
-        }
-
-        return result;
+        return gameRepository
+                .findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public GameResponse getById(long id) {
 
-        Game game = games.get(id);
-
-        if (game == null) {
-            throw new GameNotFoundException(id);
-        }
+        Game game = gameRepository
+                .findById(id)
+                .orElseThrow(
+                        () ->
+                                new GameNotFoundException(id)
+                );
 
         return toResponse(game);
     }
@@ -75,10 +47,7 @@ public class GameService {
             CreateGameRequest request
     ) {
 
-        long id = idSequence.incrementAndGet();
-
         Game game = new Game(
-                id,
                 request.name(),
                 request.description(),
                 request.price(),
@@ -86,9 +55,10 @@ public class GameService {
                 true
         );
 
-        games.put(id, game);
+        Game savedGame =
+                gameRepository.save(game);
 
-        return toResponse(game);
+        return toResponse(savedGame);
     }
 
     public GameResponse update(
@@ -96,12 +66,14 @@ public class GameService {
             UpdateGameRequest request
     ) {
 
-        if (!games.containsKey(id)) {
-            throw new GameNotFoundException(id);
-        }
+        Game game = gameRepository
+                .findById(id)
+                .orElseThrow(
+                        () ->
+                                new GameNotFoundException(id)
+                );
 
-        Game updatedGame = new Game(
-                id,
+        game.update(
                 request.name(),
                 request.description(),
                 request.price(),
@@ -109,21 +81,27 @@ public class GameService {
                 request.available()
         );
 
-        games.put(id, updatedGame);
+        Game savedGame =
+                gameRepository.save(game);
 
-        return toResponse(updatedGame);
+        return toResponse(savedGame);
     }
 
     public void delete(long id) {
 
-        if (!games.containsKey(id)) {
-            throw new GameNotFoundException(id);
-        }
+        Game game = gameRepository
+                .findById(id)
+                .orElseThrow(
+                        () ->
+                                new GameNotFoundException(id)
+                );
 
-        games.remove(id);
+        gameRepository.delete(game);
     }
 
-    private GameResponse toResponse(Game game) {
+    private GameResponse toResponse(
+            Game game
+    ) {
 
         return new GameResponse(
                 game.getId(),
