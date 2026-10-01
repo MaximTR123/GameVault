@@ -6,6 +6,8 @@ import com.gamevault.server.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import com.gamevault.server.dto.LoginRequest;
+import com.gamevault.server.dto.LoginResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -22,5 +24,12 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request
     ) {
         return userService.register(request);
+    }
+
+    @PostMapping("/login")
+    public LoginResponse login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        return userService.login(request);
     }
 }

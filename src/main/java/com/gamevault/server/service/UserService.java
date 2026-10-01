@@ -8,23 +8,30 @@ import com.gamevault.server.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.gamevault.server.dto.LoginRequest;
+import com.gamevault.server.dto.LoginResponse;
 
 @Service
 public class UserService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.userRepository = userRepository;
-        this.passwordEncoder = new BCryptPasswordEncoder();
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserResponse register(RegisterRequest request) {
-        if(userRepository.existsByUsername(request.username())) {
+
+        if (userRepository.existsByUsername(request.username())) {
             throw new IllegalArgumentException("Username is already taken");
         }
 
-        if(userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("Email is already registered");
         }
 
@@ -40,6 +47,25 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         return toResponse(savedUser);
+    }
+
+    public LoginResponse login(LoginRequest request) {
+
+        User user = userRepository.findByUsername(request.username())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Invalid username or password")
+                );
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new IllegalArgumentException("Invalid username or password");
+        }
+
+        return new LoginResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRole()
+        );
     }
 
     private UserResponse toResponse(User user) {
