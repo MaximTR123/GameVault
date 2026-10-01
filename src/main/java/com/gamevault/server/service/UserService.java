@@ -10,6 +10,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.gamevault.server.dto.LoginRequest;
 import com.gamevault.server.dto.LoginResponse;
+import com.gamevault.server.exception.EmailAlreadyRegisteredException;
+import com.gamevault.server.exception.InvalidCredentialsException;
+import com.gamevault.server.exception.UsernameAlreadyTakenException;
 
 @Service
 public class UserService {
@@ -28,11 +31,11 @@ public class UserService {
     public UserResponse register(RegisterRequest request) {
 
         if (userRepository.existsByUsername(request.username())) {
-            throw new IllegalArgumentException("Username is already taken");
+            throw new UsernameAlreadyTakenException("Username is already taken");
         }
 
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email is already registered");
+            throw new EmailAlreadyRegisteredException("Email is already registered");
         }
 
         String encodedPassword = passwordEncoder.encode(request.password());
@@ -53,11 +56,11 @@ public class UserService {
 
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Invalid username or password")
+                        new InvalidCredentialsException("Invalid username or password")
                 );
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid username or password");
+            throw new InvalidCredentialsException("Invalid username or password");
         }
 
         return new LoginResponse(
