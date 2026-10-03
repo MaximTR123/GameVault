@@ -14,4 +14,9 @@ public class StatusController {
                 "application", "GameVault"
         );
     }
+
+    @GetMapping("/api/status/private")
+    public String privateStatus() {
+        return "You are authenticated";
+    }
 }

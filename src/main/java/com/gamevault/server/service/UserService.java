@@ -13,19 +13,23 @@ import com.gamevault.server.dto.LoginResponse;
 import com.gamevault.server.exception.EmailAlreadyRegisteredException;
 import com.gamevault.server.exception.InvalidCredentialsException;
 import com.gamevault.server.exception.UsernameAlreadyTakenException;
+import com.gamevault.server.security.JwtService;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public UserService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     public UserResponse register(RegisterRequest request) {
@@ -63,11 +67,14 @@ public class UserService {
             throw new InvalidCredentialsException("Invalid username or password");
         }
 
+        String token = jwtService.generateToken(user);
+
         return new LoginResponse(
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getRole()
+                user.getRole(),
+                token
         );
     }
 
