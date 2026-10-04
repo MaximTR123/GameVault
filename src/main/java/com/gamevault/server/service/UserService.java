@@ -154,4 +154,23 @@ public class UserService {
 
         userRepository.delete(user);
     }
+
+    public UserResponse updateUserRole(Long id, UpdateUserRoleRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found")
+                );
+
+        user.setRole(request.role());
+
+        User updatedUser = userRepository.save(user);
+
+        return new UserResponse(
+                updatedUser.getId(),
+                updatedUser.getUsername(),
+                updatedUser.getEmail(),
+                updatedUser.getRole(),
+                updatedUser.getCreatedAt()
+        );
+    }
 }

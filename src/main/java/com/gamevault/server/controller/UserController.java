@@ -1,6 +1,7 @@
 package com.gamevault.server.controller;
 
 import com.gamevault.server.dto.CreateUserRequest;
+import com.gamevault.server.dto.UpdateUserRoleRequest;
 import com.gamevault.server.dto.UserResponse;
 import com.gamevault.server.service.UserService;
 import jakarta.validation.Valid;
@@ -42,5 +43,13 @@ public class UserController {
                 id,
                 authentication.getName()
         );
+    }
+
+    @PutMapping("/{id}/role")
+    public UserResponse updateUserRole(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRoleRequest request
+    ) {
+        return userService.updateUserRole(id, request);
     }
 }
