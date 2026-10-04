@@ -27,4 +27,16 @@ public class GlobalExceptionHandler {
     public String handleInvalidCredentialsException(InvalidCredentialsException exception) {
         return exception.getMessage();
     }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleUserNotFoundException(UserNotFoundException exception) {
+        return exception.getMessage();
+    }
+
+    @ExceptionHandler(CannotDeleteUserException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleCannotDeleteUserException(CannotDeleteUserException exception) {
+        return exception.getMessage();
+    }
 }

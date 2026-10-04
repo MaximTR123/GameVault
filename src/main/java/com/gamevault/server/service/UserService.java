@@ -1,17 +1,16 @@
 package com.gamevault.server.service;
 
 import com.gamevault.server.dto.*;
+import com.gamevault.server.exception.*;
 import com.gamevault.server.model.User;
 import com.gamevault.server.model.UserRole;
 import com.gamevault.server.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.gamevault.server.exception.EmailAlreadyRegisteredException;
-import com.gamevault.server.exception.InvalidCredentialsException;
-import com.gamevault.server.exception.UsernameAlreadyTakenException;
 import com.gamevault.server.security.JwtService;
 import com.gamevault.server.dto.CreateUserRequest;
+import java.util.List;
 
 @Service
 public class UserService {
@@ -113,5 +112,46 @@ public class UserService {
                 savedUser.getRole(),
                 savedUser.getCreatedAt()
         );
+    }
+
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getRole(),
+                        user.getCreatedAt()
+                ))
+                .toList();
+    }
+
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found")
+                );
+
+        return new UserResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRole(),
+                user.getCreatedAt()
+        );
+    }
+
+    public void deleteUser(Long id, String currentUsername) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found")
+                );
+
+        if(user.getUsername().equals(currentUsername)) {
+            throw new CannotDeleteUserException("You can't delete yourself");
+        }
+
+        userRepository.delete(user);
     }
 }
