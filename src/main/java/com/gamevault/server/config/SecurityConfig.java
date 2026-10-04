@@ -58,6 +58,9 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
+                        .requestMatchers(HttpMethod.POST, "/api/users")
+                        .hasRole("ADMIN")
+
                         .anyRequest()
                         .authenticated()
                 )
