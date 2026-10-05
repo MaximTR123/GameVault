@@ -45,4 +45,16 @@ public class GlobalExceptionHandler {
     public String handleLastAdminException(LastAdminException exception) {
         return exception.getMessage();
     }
+
+    @ExceptionHandler(GameAlreadyPurchasedException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public String handleGameAlreadyPurchasedException(GameAlreadyPurchasedException exception) {
+        return exception.getMessage();
+    }
+
+    @ExceptionHandler(GameUnavailableException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleGameUnavailableException(GameUnavailableException exception) {
+        return exception.getMessage();
+    }
 }
