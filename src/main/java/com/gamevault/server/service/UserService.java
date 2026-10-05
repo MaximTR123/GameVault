@@ -161,6 +161,16 @@ public class UserService {
                         new UserNotFoundException("User not found")
                 );
 
+        if(user.getRole() == UserRole.ADMIN && request.role() == UserRole.USER) {
+            long adminCount = userRepository.countByRole(UserRole.ADMIN);
+
+            if(adminCount <= 1) {
+                throw new LastAdminException(
+                        "You can`t remove the last administrator"
+                );
+            }
+        }
+
         user.setRole(request.role());
 
         User updatedUser = userRepository.save(user);

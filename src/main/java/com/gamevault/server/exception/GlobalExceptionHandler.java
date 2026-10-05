@@ -39,4 +39,10 @@ public class GlobalExceptionHandler {
     public String handleCannotDeleteUserException(CannotDeleteUserException exception) {
         return exception.getMessage();
     }
+
+    @ExceptionHandler(LastAdminException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public String handleLastAdminException(LastAdminException exception) {
+        return exception.getMessage();
+    }
 }
