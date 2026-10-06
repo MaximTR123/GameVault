@@ -1,6 +1,7 @@
 package com.gamevault.server.service;
 
 import com.gamevault.server.dto.CreatePurchaseRequest;
+import com.gamevault.server.dto.LibraryGameResponse;
 import com.gamevault.server.dto.PurchaseResponse;
 import com.gamevault.server.exception.GameAlreadyPurchasedException;
 import com.gamevault.server.exception.GameNotFoundException;
@@ -13,6 +14,7 @@ import com.gamevault.server.repository.GameRepository;
 import com.gamevault.server.repository.PurchaseRepository;
 import com.gamevault.server.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @Service
 public class PurchaseService {
@@ -74,5 +76,27 @@ public class PurchaseService {
                 savedPurchase.getPricePaid(),
                 savedPurchase.getPurchasedAt()
         );
+    }
+
+    public List<LibraryGameResponse> getUserLibrary(
+            String username
+    ) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new IllegalStateException("User not found")
+                );
+
+        return purchaseRepository
+                .findAllByUserId(user.getId())
+                .stream()
+                .map(purchase -> new LibraryGameResponse(
+                        purchase.getGame().getId(),
+                        purchase.getGame().getName(),
+                        purchase.getGame().getDescription(),
+                        purchase.getPricePaid(),
+                        purchase.getPurchasedAt()
+                ))
+                .toList();
     }
 }

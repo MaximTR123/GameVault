@@ -3,7 +3,6 @@ package com.gamevault.server.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Email;
-import org.hibernate.validator.constraints.pl.NIP;
 
 public record RegisterRequest(
         @NotBlank(message = "Username must not be blank")

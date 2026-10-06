@@ -89,6 +89,12 @@ public class SecurityConfig {
                         )
                         .hasAnyRole("USER", "ADMIN")
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/library"
+                        )
+                        .hasAnyRole("USER", "ADMIN")
+
                         .anyRequest()
                         .authenticated()
                 )

@@ -8,5 +8,5 @@ import java.util.List;
 public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     boolean existsByUserIdAndGameId(long userId, long gameId);
 
-    List<Purchase> findAllByUserId(long userId, long gameId);
+    List<Purchase> findAllByUserId(long userId);
 }
