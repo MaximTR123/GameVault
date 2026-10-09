@@ -95,6 +95,9 @@ public class SecurityConfig {
                         )
                         .hasAnyRole("USER", "ADMIN")
 
+                        .requestMatchers("/error/", "/error/**")
+                        .permitAll()
+
                         .anyRequest()
                         .authenticated()
                 )

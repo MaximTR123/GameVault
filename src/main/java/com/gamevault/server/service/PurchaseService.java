@@ -57,7 +57,7 @@ public class PurchaseService {
                 game.getId()
         )) {
             throw new GameAlreadyPurchasedException(
-                    "Game was already been purchased"
+                    "Game has already been purchased"
             );
         }
 
@@ -84,7 +84,7 @@ public class PurchaseService {
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() ->
-                        new IllegalStateException("User not found")
+                        new UserNotFoundException("User not found")
                 );
 
         return purchaseRepository

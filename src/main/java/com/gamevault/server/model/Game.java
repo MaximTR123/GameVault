@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 public class Game {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Long id;
 
     @Column (
             nullable = false,
@@ -55,7 +55,7 @@ public class Game {
         this.available = available;
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 

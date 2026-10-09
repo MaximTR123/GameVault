@@ -57,4 +57,10 @@ public class GlobalExceptionHandler {
     public String handleGameUnavailableException(GameUnavailableException exception) {
         return exception.getMessage();
     }
+
+    @ExceptionHandler(GameNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public String handleGameNotFoundException(GameNotFoundException exception) {
+        return exception.getMessage();
+    }
 }

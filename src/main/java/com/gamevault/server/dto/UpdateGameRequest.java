@@ -17,7 +17,7 @@ public record UpdateGameRequest(
         @NotNull(message = "Price is required")
         @DecimalMin(
                 value = "0.01",
-                message = "Price must be at least 0.1"
+                message = "Price must be at least 0.01"
         )
         BigDecimal price,
 
