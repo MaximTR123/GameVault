@@ -5,7 +5,6 @@ import com.gamevault.server.exception.*;
 import com.gamevault.server.model.User;
 import com.gamevault.server.model.UserRole;
 import com.gamevault.server.repository.UserRepository;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.gamevault.server.security.JwtService;
