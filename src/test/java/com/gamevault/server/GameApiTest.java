@@ -20,6 +20,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import java.util.Map;
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -282,6 +285,7 @@ class GameApiTest {
                             "description": "Price must be at least 0.01",
                             "price": 0,
                             "genre": "RPG"
+                        }
                       """;
 
         HttpResponse<String> response = send(
@@ -295,6 +299,146 @@ class GameApiTest {
                 400,
                 response.statusCode(),
                 "A game with an invalid price must be rejected"
+        );
+    }
+
+    @Test
+    void shouldCompleteGameCrudLifecycle() throws Exception {
+        //1.Create
+        String createBody = """
+                        {
+                            "name": "CRUD Test Game",
+                            "description": "Original description",
+                            "price": 19.99,
+                            "genre": "RPG"
+                        }
+                      """;
+
+        HttpResponse<String> createResponse = send(
+                "POST",
+                  "/api/games",
+                       createBody,
+                       adminToken
+        );
+
+        assertEquals(
+                201,
+                createResponse.statusCode(),
+                "Game should be created"
+        );
+
+        JsonNode createGame = objectMapper.readTree(createResponse.body());
+
+        assertTrue(
+                createGame.hasNonNull("id"),
+                "Create game should have an ID"
+        );
+
+        long gameId = createGame.get("id").asLong();
+
+        //2.Read
+
+        HttpResponse<String> getResponse = send(
+                "GET",
+                "/api/games/" + gameId,
+                null,
+                null
+        );
+
+        assertEquals(
+                200,
+                getResponse.statusCode()
+        );
+
+        JsonNode game = objectMapper.readTree(getResponse.body());
+
+        assertEquals(
+                "Original description",
+                game.get("description").asText()
+        );
+
+        //3.Update
+        String  updateBody = """
+                             {
+                                 "name": "Updated CRUD Game",
+                                 "description": "Updated description",
+                                 "price": 29.99,
+                                 "genre": "RPG",
+                                 "available": true
+                             }
+                             """;
+
+        HttpResponse<String> updateResponse = send(
+                "PUT",
+                  "/api/games/" + gameId,
+                       updateBody,
+                       adminToken
+        );
+
+        assertEquals(
+                200,
+                updateResponse.statusCode(),
+                "Game should be updated"
+        );
+
+        //Check for updates
+        HttpResponse<String> updateGetResponse = send(
+                "GET",
+                "/api/games/" + gameId,
+                null,
+                null
+        );
+
+        assertEquals(
+                200,
+                updateGetResponse.statusCode()
+        );
+
+        JsonNode updateGame = objectMapper.readTree(updateGetResponse.body());
+
+        assertEquals(
+                "Updated CRUD Game",
+                updateGame.get("name").asText()
+        );
+
+        assertEquals(
+                "Updated description",
+                updateGame.get("description").asText()
+        );
+
+        assertEquals(
+                0,
+                updateGame.get("price").decimalValue()
+                        .compareTo(new java.math.BigDecimal("29.99"))
+        );
+
+        //4.Delete
+
+        HttpResponse<String> deleteResponse = send(
+                "DELETE",
+                "/api/games/" + gameId,
+                null,
+                adminToken
+        );
+
+        assertEquals(
+                204,
+                deleteResponse.statusCode(),
+                "Game should be deleted"
+        );
+
+        //Checking for delete game
+        HttpResponse<String> deleteGetResponse = send(
+                "GET",
+                "/api/games/" + gameId,
+                null,
+                null
+        );
+
+        assertEquals(
+                404,
+                deleteGetResponse.statusCode(),
+                "Delete game should no longer exist"
         );
     }
 }
