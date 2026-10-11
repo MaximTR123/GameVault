@@ -44,6 +44,12 @@ class GameApiTest {
     private static final String ADMIN_PASSWORD = "TestPassword123";
     private static final String ADMIN_EMAIL = "testadmin@gamevault.test";
 
+    private String userToken;
+
+    private static final String USER_USERNAME = "testuser";
+    private static final String USER_PASSWORD = "TestPassword123";
+    private static final String USER_EMAIL = "testuser@example.com";
+
 
     @BeforeEach
     void setUp() throws Exception {
@@ -60,6 +66,21 @@ class GameApiTest {
         adminToken = loginAndGetToken(
                 ADMIN_USERNAME,
                 ADMIN_PASSWORD
+        );
+
+        userRepository.findByUsername(USER_USERNAME)
+                .orElseGet(() -> userRepository.save(
+                        new User(
+                                USER_USERNAME,
+                                USER_EMAIL,
+                                passwordEncoder.encode(USER_PASSWORD),
+                                UserRole.USER
+                        )
+                ));
+
+        userToken = loginAndGetToken(
+                USER_USERNAME,
+                USER_PASSWORD
         );
     }
 
@@ -202,5 +223,78 @@ class GameApiTest {
 
         assertEquals("Test Game", game.get("name").asText());
         assertEquals("RPG", game.get("genre").asText());
+    }
+
+    @Test
+    void shouldRejectGameCreationByRegularUser()  throws Exception {
+        String body = """
+                {
+                    "name": "Unauthorized Game",
+                    "description": "A regular user must not create games",
+                    "price": 19.99,
+                    "genre": "RPG"
+                }
+                """;
+
+        HttpResponse<String> response = send(
+                "POST",
+                "/api/games",
+                    body,
+                    userToken
+        );
+
+        assertEquals(
+                403,
+                response.statusCode(),
+                "A regular user must not create games"
+        );
+    }
+
+    @Test
+    void shouldRejectGameCreationWithoutToken()  throws Exception {
+        String body = """
+                        {
+                            "name": "Unauthorized Game",
+                            "description": "A request without token",
+                            "price": 19.99,
+                            "genre": "RPG"
+                        }
+                        """;
+
+        HttpResponse<String> response = send(
+                "POST",
+                  "/api/games",
+                        body,
+                        null
+        );
+
+        assertTrue(
+                response.statusCode() == 401 || response.statusCode() == 403,
+                "An unauthorized request must be rejected, but received: " + response.statusCode()
+        );
+    }
+
+    @Test
+    void shouldRejectGameWithInvalidPrice() throws Exception {
+        String body = """
+                        {
+                            "name": "Invalid price game",
+                            "description": "Price must be at least 0.01",
+                            "price": 0,
+                            "genre": "RPG"
+                      """;
+
+        HttpResponse<String> response = send(
+                "POST",
+                  "/api/games",
+                       body,
+                       adminToken
+        );
+
+        assertEquals(
+                400,
+                response.statusCode(),
+                "A game with an invalid price must be rejected"
+        );
     }
 }
