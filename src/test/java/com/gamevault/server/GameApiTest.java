@@ -53,6 +53,81 @@ class GameApiTest {
     private static final String USER_PASSWORD = "TestPassword123";
     private static final String USER_EMAIL = "testuser@example.com";
 
+    private long createAvailableGame() throws Exception {
+        String uniqueName = "Purchased Test Game " +  UUID.randomUUID();
+
+        String body = objectMapper.writeValueAsString(
+                Map.of(
+                        "name", uniqueName,
+                        "description", "Game created for API testing",
+                        "price", new java.math.BigDecimal("9.99"),
+                        "genre", "RPG"
+                )
+        );
+
+        HttpResponse<String> response = send(
+                "POST",
+                "/api/games",
+                body,
+                adminToken
+        );
+
+        assertEquals(
+                201,
+                response.statusCode(),
+                "Test game creation failed: " + response.body()
+        );
+
+        JsonNode game = objectMapper.readTree(response.body());
+
+        return game.get("id").asLong();
+    }
+
+    private HttpResponse<String> purchaseGame(long gameId, String token) throws Exception {
+        String body = objectMapper.writeValueAsString(
+                Map.of(
+                        "gameId", gameId
+                )
+        );
+
+        return send(
+                "POST",
+                "/api/purchases",
+                body,
+                token
+        );
+    }
+
+    private String registerAndGetToken() throws Exception {
+        String uniqueId = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+
+        String username = "library_" + uniqueId;
+        String password = "SecurePassword123";
+        String email = username + "@gmail.com";
+
+        String body = objectMapper.writeValueAsString(
+                Map.of(
+                    "username", username,
+                        "email", email,
+                        "password", password
+                )
+        );
+
+        HttpResponse<String> registerResponse = send(
+                "POST",
+                "/api/auth/register",
+                body,
+                null
+        );
+
+        assertEquals(
+                201,
+                registerResponse.statusCode(),
+                "Test user registration failed: " + registerResponse.body()
+        );
+
+        return loginAndGetToken(username, password);
+    }
 
     @BeforeEach
     void setUp() throws Exception {
@@ -561,5 +636,156 @@ class GameApiTest {
                 response.statusCode(),
                 "Incorrect password should return 401 Unauthorized"
         );
+    }
+
+    @Test
+    void shouldPurchaseGameSuccessfully() throws Exception {
+        long gameId = createAvailableGame();
+
+        HttpResponse<String> response = purchaseGame(gameId, userToken);
+
+        assertEquals(
+                201,
+                response.statusCode(),
+                "Purchase failed: "  + response.body()
+        );
+
+        JsonNode purchase = objectMapper.readTree(response.body());
+
+        assertEquals(
+                gameId,
+                purchase.get("gameId").asLong()
+        );
+
+        assertTrue(
+                purchase.get("gameName").asText().startsWith("Purchased Test Game"),
+                "Unexpected game name: " + purchase.get("gameName").asText()
+        );
+
+        assertEquals(
+                0,
+                purchase.get("pricePaid").decimalValue().compareTo(new java.math.BigDecimal("9.99"))
+        );
+
+        assertTrue(purchase.hasNonNull("id"));
+        assertTrue(purchase.hasNonNull("purchasedAt"));
+    }
+
+    @Test
+    void shouldRejectDuplicatePurchase()  throws Exception {
+        long gameId = createAvailableGame();
+
+        HttpResponse<String> firstPurchase = purchaseGame(gameId, userToken);
+
+        assertEquals(
+                201,
+                firstPurchase.statusCode()
+        );
+
+        HttpResponse<String> secondPurchase = purchaseGame(gameId, userToken);
+
+        assertEquals(
+                409,
+                secondPurchase.statusCode(),
+                "Duplicate purchase should return 409 Conflict"
+        );
+    }
+
+    @Test
+    void shouldRejectPurchaseWithoutToken()  throws Exception {
+        long gameId = createAvailableGame();
+
+        HttpResponse<String> response = purchaseGame(gameId, null);
+
+        assertTrue(
+                response.statusCode() == 401 || response.statusCode() == 403,
+                "Unauthenticated purchase must be rejected"
+        );
+    }
+
+    @Test
+    void shouldRejectPurchaseOfMissingGame()  throws Exception {
+        HttpResponse<String> response = purchaseGame(
+                9999999999L,
+                userToken
+        );
+
+        assertEquals(
+                404,
+                response.statusCode(),
+                "Purchase of game should return 404"
+        );
+    }
+
+    @Test
+    void shouldShowPurchasedGameOnlyInOwnersLibrary()  throws Exception {
+        long gameId = createAvailableGame();
+
+        HttpResponse<String> purchaseResponse = purchaseGame(gameId, userToken);
+
+        assertEquals(
+                201,
+                purchaseResponse.statusCode(),
+                "Purchase should succeed before checking the library"
+        );
+
+        //Getting User Library
+        HttpResponse<String> ownerLibraryResponse = send(
+                "GET",
+                "/api/library",
+                null,
+                userToken
+        );
+
+        assertEquals(
+                200,
+                ownerLibraryResponse.statusCode()
+        );
+
+        JsonNode ownerLibrary = objectMapper.readTree(ownerLibraryResponse.body());
+
+        boolean gameFound = false;
+
+        for(JsonNode game : ownerLibrary) {
+            if(game.get("gameId").asLong() == gameId) {
+                gameFound = true;
+
+                assertEquals(
+                        0,
+                        game.get("pricePaid").decimalValue().compareTo(new java.math.BigDecimal("9.99"))
+                );
+            }
+        }
+
+        assertTrue(
+                gameFound,
+                "Purchased game should appear in the owner's library"
+        );
+
+        //Second User Registration
+        String otherUserToken = registerAndGetToken();
+
+        //Checking library of second user
+        HttpResponse<String> otherLibraryResponse = send(
+                "GET",
+                "/api/library",
+                null,
+                otherUserToken
+        );
+
+        assertEquals(
+                200,
+                otherLibraryResponse.statusCode()
+        );
+
+        JsonNode otherLibrary = objectMapper.readTree(otherLibraryResponse.body());
+
+        for(JsonNode game : otherLibrary) {
+            assertNotEquals(
+                    gameId,
+                    game.get("gameId").asLong(),
+                    "Another user must not see someone else's purchased game"
+            );
+        }
     }
 }
