@@ -1,6 +1,10 @@
 
 package com.gamevault.server;
 
+import com.gamevault.server.model.Game;
+import com.gamevault.server.model.Genre;
+import com.gamevault.server.repository.GameRepository;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamevault.server.model.User;
@@ -34,6 +38,9 @@ class GameApiTest {
     private final HttpClient client = HttpClient.newHttpClient();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Autowired
+    private GameRepository gameRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -787,5 +794,142 @@ class GameApiTest {
                     "Another user must not see someone else's purchased game"
             );
         }
+    }
+
+    @Test
+    void shouldRejectPurchaseOfUnavailableGame()  throws Exception {
+        Game game = gameRepository.save(
+                new Game(
+                        "Unavailable Game " + UUID.randomUUID(),
+                        "This game cannot be purchased",
+                        new java.math.BigDecimal("9.99"),
+                        Genre.RPG,
+                        false
+                )
+        );
+
+        HttpResponse<String> response = purchaseGame(game.getId(), userToken);
+
+        assertEquals(
+                400,
+                response.statusCode(),
+                "Unavailable game should not be purchased"
+        );
+    }
+
+    @Test
+    void shouldRejectPurchaseWithoutGameId()  throws Exception {
+        HttpResponse<String> response = send(
+                "POST",
+                "/api/purchases",
+                "{}",
+                userToken
+        );
+
+        assertEquals(
+                400,
+                response.statusCode(),
+                "Purchase request without game id should return 400"
+        );
+    }
+
+    @Test
+    void shouldPreserveOriginalPurchasePrice()  throws Exception {
+        long gameId = createAvailableGame();
+
+        //Buy game for 9.99
+        HttpResponse<String> purchaseResponse = purchaseGame(gameId, userToken);
+
+        assertEquals(
+                201,
+                purchaseResponse.statusCode(),
+                purchaseResponse.body()
+        );
+
+        JsonNode purchase = objectMapper.readTree(purchaseResponse.body());
+
+        assertEquals(
+                0,
+                purchase.get("pricePaid").decimalValue().compareTo(new java.math.BigDecimal("9.99"))
+        );
+
+        //Change game price in test DB
+        Game game = gameRepository.findById(gameId).orElseThrow();
+
+        game.update(
+                game.getName(),
+                game.getDescription(),
+                new java.math.BigDecimal("29.99"),
+                game.getGenre(),
+                game.isAvailable()
+        );
+
+        gameRepository.save(game);
+
+        //Checking user library
+        HttpResponse<String> libraryResponse = send(
+                "GET",
+                "/api/library",
+                null,
+                userToken
+        );
+
+        assertEquals(
+                200,
+                libraryResponse.statusCode()
+        );
+
+        JsonNode library = objectMapper.readTree(libraryResponse.body());
+
+        boolean gameFound = false;
+
+        for(JsonNode libraryGame : library) {
+            if(libraryGame.get("gameId").asLong() == gameId) {
+                gameFound = true;
+
+                assertEquals(
+                        0,
+                        libraryGame.get("pricePaid").decimalValue().compareTo(new java.math.BigDecimal("9.99")),
+                        "Library should preserve the original purchase price"
+                );
+            }
+        }
+
+        assertTrue(
+                gameFound,
+                "Purchased game should remain in the library"
+        );
+    }
+
+    @Test
+    void shouldAllowDifferentUsersToPurchaseSameGame()  throws Exception {
+        long gameId = createAvailableGame();
+
+        //First user buy game
+        HttpResponse<String> firstPurchase = purchaseGame(gameId, userToken);
+
+        assertEquals(
+                201,
+                firstPurchase.statusCode()
+        );
+
+        //Second user registration
+        String secondUserToken = registerAndGetToken();
+
+        //Second user buy the same game
+        HttpResponse<String> secondPurchase = purchaseGame(gameId, secondUserToken);
+
+        assertEquals(
+                201,
+                secondPurchase.statusCode(),
+                "A different user should be able to purchase the same game"
+        );
+
+        JsonNode purchase = objectMapper.readTree(secondPurchase.body());
+
+        assertEquals(
+                gameId,
+                purchase.get("gameId").asLong()
+        );
     }
 }
