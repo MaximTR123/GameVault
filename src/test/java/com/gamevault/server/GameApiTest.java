@@ -9,6 +9,7 @@ import com.gamevault.server.model.User;
 import com.gamevault.server.model.UserRole;
 import com.gamevault.server.repository.UserRepository;
 import com.gamevault.server.helper.AuthHelper;
+import com.gamevault.server.factory.TestDataFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpResponse;
 
@@ -60,35 +62,10 @@ class GameApiTest {
 
     private ApiClient apiClient;
     private AuthHelper authHelper;
+    private TestDataFactory testDataFactory;
 
-    private long createAvailableGame() throws Exception {
-        String uniqueName = "Purchased Test Game " +  UUID.randomUUID();
-
-        String body = objectMapper.writeValueAsString(
-                Map.of(
-                        "name", uniqueName,
-                        "description", "Game created for API testing",
-                        "price", new java.math.BigDecimal("9.99"),
-                        "genre", "RPG"
-                )
-        );
-
-        HttpResponse<String> response = send(
-                "POST",
-                "/api/games",
-                body,
-                adminToken
-        );
-
-        assertEquals(
-                201,
-                response.statusCode(),
-                "Test game creation failed: " + response.body()
-        );
-
-        JsonNode game = objectMapper.readTree(response.body());
-
-        return game.get("id").asLong();
+    private long createAvailableGame() throws IOException, InterruptedException {
+        return testDataFactory.createAvailableGame();
     }
 
     private HttpResponse<String> purchaseGame(long gameId, String token) throws Exception {
@@ -155,6 +132,12 @@ class GameApiTest {
         adminToken = authHelper.loginAndGetToken(
                 ADMIN_USERNAME,
                 ADMIN_PASSWORD
+        );
+
+        testDataFactory = new TestDataFactory(
+                apiClient,
+                objectMapper,
+                adminToken
         );
 
         userRepository.findByUsername(USER_USERNAME)
@@ -598,7 +581,7 @@ class GameApiTest {
         );
 
         assertTrue(
-                purchase.get("gameName").asText().startsWith("Purchased Test Game"),
+                purchase.get("gameName").asText().startsWith(TestDataFactory.GAME_NAME_PREFIX),
                 "Unexpected game name: " + purchase.get("gameName").asText()
         );
 
