@@ -8,6 +8,7 @@ import com.gamevault.server.client.ApiClient;
 import com.gamevault.server.model.User;
 import com.gamevault.server.model.UserRole;
 import com.gamevault.server.repository.UserRepository;
+import com.gamevault.server.helper.AuthHelper;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,14 +16,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import java.util.Map;
@@ -62,6 +59,7 @@ class GameApiTest {
     private static final String USER_EMAIL = "testuser@example.com";
 
     private ApiClient apiClient;
+    private AuthHelper authHelper;
 
     private long createAvailableGame() throws Exception {
         String uniqueName = "Purchased Test Game " +  UUID.randomUUID();
@@ -136,12 +134,13 @@ class GameApiTest {
                 "Test user registration failed: " + registerResponse.body()
         );
 
-        return loginAndGetToken(username, password);
+        return authHelper.loginAndGetToken(username, password);
     }
 
     @BeforeEach
     void setUp() throws Exception {
         apiClient = new ApiClient("http://localhost:" + port);
+        authHelper = new AuthHelper(apiClient, objectMapper);
 
         userRepository.findByUsername(ADMIN_USERNAME)
                 .orElseGet(() -> userRepository.save(
@@ -153,7 +152,7 @@ class GameApiTest {
                         )
                 ));
 
-        adminToken = loginAndGetToken(
+        adminToken = authHelper.loginAndGetToken(
                 ADMIN_USERNAME,
                 ADMIN_PASSWORD
         );
@@ -168,7 +167,7 @@ class GameApiTest {
                         )
                 ));
 
-        userToken = loginAndGetToken(
+        userToken = authHelper.loginAndGetToken(
                 USER_USERNAME,
                 USER_PASSWORD
         );
@@ -181,41 +180,6 @@ class GameApiTest {
             String token
     ) throws Exception {
         return apiClient.send(method, path, body, token);
-    }
-
-    private String loginAndGetToken(
-            String username,
-            String password
-    ) throws Exception {
-
-        String body = objectMapper.writeValueAsString(
-                java.util.Map.of(
-                        "username", username,
-                        "password", password
-                )
-        );
-
-        HttpResponse<String> response = send(
-                "POST",
-                "/api/auth/login",
-                body,
-                null
-        );
-
-        assertEquals(
-                200,
-                response.statusCode(),
-                "Login failed: " + response.body()
-        );
-
-        JsonNode json = objectMapper.readTree(response.body());
-
-        assertTrue(
-                json.hasNonNull("token"),
-                "Login response must contain a token"
-        );
-
-        return json.get("token").asText();
     }
 
     @Test
