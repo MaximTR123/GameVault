@@ -4,12 +4,13 @@ package com.gamevault.server;
 import com.gamevault.server.model.Game;
 import com.gamevault.server.model.Genre;
 import com.gamevault.server.repository.GameRepository;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gamevault.server.client.ApiClient;
 import com.gamevault.server.model.User;
 import com.gamevault.server.model.UserRole;
 import com.gamevault.server.repository.UserRepository;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,6 +60,8 @@ class GameApiTest {
     private static final String USER_USERNAME = "testuser";
     private static final String USER_PASSWORD = "TestPassword123";
     private static final String USER_EMAIL = "testuser@example.com";
+
+    private ApiClient apiClient;
 
     private long createAvailableGame() throws Exception {
         String uniqueName = "Purchased Test Game " +  UUID.randomUUID();
@@ -138,6 +141,8 @@ class GameApiTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        apiClient = new ApiClient("http://localhost:" + port);
+
         userRepository.findByUsername(ADMIN_USERNAME)
                 .orElseGet(() -> userRepository.save(
                         new User(
@@ -175,43 +180,7 @@ class GameApiTest {
             String body,
             String token
     ) throws Exception {
-
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:" + port + path))
-                .header("Accept", MediaType.APPLICATION_JSON_VALUE);
-
-        if (body != null) {
-            builder.header(
-                    "Content-Type",
-                    MediaType.APPLICATION_JSON_VALUE
-            );
-        }
-
-        if (token != null) {
-            builder.header(
-                    HttpHeaders.AUTHORIZATION,
-                    "Bearer " + token
-            );
-        }
-
-        switch (method) {
-            case "GET" -> builder.GET();
-            case "POST" -> builder.POST(
-                    HttpRequest.BodyPublishers.ofString(body)
-            );
-            case "PUT" -> builder.PUT(
-                    HttpRequest.BodyPublishers.ofString(body)
-            );
-            case "DELETE" -> builder.DELETE();
-            default -> throw new IllegalArgumentException(
-                    "Unsupported HTTP method: " + method
-            );
-        }
-
-        return client.send(
-                builder.build(),
-                HttpResponse.BodyHandlers.ofString()
-        );
+        return apiClient.send(method, path, body, token);
     }
 
     private String loginAndGetToken(
