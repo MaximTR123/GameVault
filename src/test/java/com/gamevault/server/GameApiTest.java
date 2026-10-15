@@ -57,6 +57,8 @@ class GameApiTest {
 
     private String userToken;
 
+    private static final long MISSING_USER_ID = 999_999L;
+
     private static final String USER_USERNAME = "testuser";
     private static final String USER_PASSWORD = "TestPassword123";
     private static final String USER_EMAIL = "testuser@example.com";
@@ -467,6 +469,108 @@ class GameApiTest {
         assertFalse(
                 user.has("password"),
                 "API must not expose the user's password"
+        );
+    }
+
+    @Test
+    void shouldReturn404WhenGettingMissingUser() throws Exception {
+        HttpResponse<String> response = send(
+                "GET",
+                "/api/users/" + MISSING_USER_ID,
+                null,
+                adminToken
+        );
+
+        assertEquals(
+                404,
+                response.statusCode(),
+                response.body()
+        );
+
+        assertEquals(
+                "User not found", response.body()
+        );
+    }
+
+    @Test
+    void shouldReturn404WhenDeletingMissingUser() throws Exception {
+        HttpResponse<String> response = send(
+                "DELETE",
+                "/api/users/" + MISSING_USER_ID,
+                null,
+                adminToken
+        );
+
+        assertEquals(
+                404,
+                response.statusCode(),
+                response.body()
+        );
+
+        assertEquals(
+                "User not found", response.body()
+        );
+    }
+
+    @Test
+    void shouldReturn404WhenUpdatingRoleOfMissingUser() throws Exception {
+        HttpResponse<String> response = send(
+                "PUT",
+                "/api/users/" + MISSING_USER_ID +"/role",
+                "{\"role\": \"USER\"}",
+                adminToken
+        );
+
+        assertEquals(
+                404,
+                response.statusCode(),
+                response.body()
+        );
+
+        assertEquals(
+                "User not found", response.body()
+        );
+    }
+
+    @Test
+    void shouldRejectTokenOfDeletedUser() throws Exception {
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        String username = "deleted_" + suffix;
+        String password = "SecurePassword123";
+
+        String registerBody = objectMapper.writeValueAsString(
+                Map.of(
+                        "username", username,
+                        "email", username + "@example.com",
+                        "password", password
+                )
+        );
+
+        HttpResponse<String> registerResponse = send(
+                "POST",
+                "/api/auth/register",
+                registerBody,
+                null
+        );
+
+        assertEquals(
+                201,
+                registerResponse.statusCode(),
+                registerResponse.body()
+        );
+
+        long userId = objectMapper.readTree(registerResponse.body()).get("id").asLong();
+        String token = authHelper.loginAndGetToken(username, password);
+
+        assertEquals(
+                204,
+                send("DELETE", "/api/users/" + userId, null, adminToken).statusCode()
+        );
+
+        int status = send("GET", "/api/library", null, token).statusCode();
+        assertTrue(
+                status == 401 || status == 403,
+                "Token of a deleted user must be rejected, but status was " + status
         );
     }
 
