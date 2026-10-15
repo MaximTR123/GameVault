@@ -10,6 +10,7 @@ import com.gamevault.server.model.UserRole;
 import com.gamevault.server.repository.UserRepository;
 import com.gamevault.server.helper.AuthHelper;
 import com.gamevault.server.factory.TestDataFactory;
+import com.gamevault.server.helper.UserTestHelper;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,6 +64,7 @@ class GameApiTest {
     private ApiClient apiClient;
     private AuthHelper authHelper;
     private TestDataFactory testDataFactory;
+    private UserTestHelper userTestHelper;
 
     private long createAvailableGame() throws IOException, InterruptedException {
         return testDataFactory.createAvailableGame();
@@ -83,41 +85,19 @@ class GameApiTest {
         );
     }
 
-    private String registerAndGetToken() throws Exception {
-        String uniqueId = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-
-        String username = "library_" + uniqueId;
-        String password = "SecurePassword123";
-        String email = username + "@gmail.com";
-
-        String body = objectMapper.writeValueAsString(
-                Map.of(
-                    "username", username,
-                        "email", email,
-                        "password", password
-                )
-        );
-
-        HttpResponse<String> registerResponse = send(
-                "POST",
-                "/api/auth/register",
-                body,
-                null
-        );
-
-        assertEquals(
-                201,
-                registerResponse.statusCode(),
-                "Test user registration failed: " + registerResponse.body()
-        );
-
-        return authHelper.loginAndGetToken(username, password);
+    private String registerAndGetToken() throws IOException, InterruptedException {
+        return userTestHelper.registerAndGetToken();
     }
 
     @BeforeEach
     void setUp() throws Exception {
         apiClient = new ApiClient("http://localhost:" + port);
         authHelper = new AuthHelper(apiClient, objectMapper);
+
+        userTestHelper = new UserTestHelper(
+                apiClient,
+                objectMapper
+        );
 
         userRepository.findByUsername(ADMIN_USERNAME)
                 .orElseGet(() -> userRepository.save(
