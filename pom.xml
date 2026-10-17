@@ -110,6 +110,13 @@
 					<execution>
 						<goals><goal>prepare-agent</goal></goals>
 					</execution>
+					<execution>
+						<id>generate-coverage-report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>
