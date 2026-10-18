@@ -3,6 +3,7 @@ package com.gamevault.server.security;
 import com.gamevault.server.model.User;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -11,14 +12,16 @@ import java.util.Date;
 
 @Service
 public class JwtService {
-    private static final String SECRET_KEY = "GameVaultSuperSecretKeyForJwt12345678901234567890";
-
     private static final long EXPIRATION_TIME = 1000 * 60 * 60;
 
     private final SecretKey key;
 
-    public JwtService() {
-        this.key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
+    public JwtService(@Value("${app.jwt.secret}") String secret) {
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < 32) {
+            throw new IllegalStateException("app.jwt.secret must be at least 32 bytes long");
+        }
+        this.key = Keys.hmacShaKeyFor(bytes);
     }
 
     public String generateToken(User user) {
