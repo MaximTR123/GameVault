@@ -63,4 +63,10 @@ public class GlobalExceptionHandler {
     public String handleGameNotFoundException(GameNotFoundException exception) {
         return exception.getMessage();
     }
+
+    @ExceptionHandler(GameHasPurchasesException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public String handleGameHasPurchasesException(GameHasPurchasesException exception) {
+        return exception.getMessage();
+    }
 }

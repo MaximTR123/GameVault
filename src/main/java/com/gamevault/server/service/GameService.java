@@ -3,9 +3,11 @@ package com.gamevault.server.service;
 import com.gamevault.server.dto.CreateGameRequest;
 import com.gamevault.server.dto.GameResponse;
 import com.gamevault.server.dto.UpdateGameRequest;
+import com.gamevault.server.exception.GameHasPurchasesException;
 import com.gamevault.server.exception.GameNotFoundException;
 import com.gamevault.server.model.Game;
 import com.gamevault.server.repository.GameRepository;
+import com.gamevault.server.repository.PurchaseRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,12 +16,15 @@ import java.util.List;
 public class GameService {
 
     private final GameRepository gameRepository;
+    private final PurchaseRepository purchaseRepository;
 
     public GameService(
-            GameRepository gameRepository
+            GameRepository gameRepository,
+            PurchaseRepository purchaseRepository
     ) {
 
         this.gameRepository = gameRepository;
+        this.purchaseRepository = purchaseRepository;
     }
 
     public List<GameResponse> getAll() {
@@ -97,6 +102,10 @@ public class GameService {
                 );
 
         gameRepository.delete(game);
+
+        if(purchaseRepository.existsByGameId(id)) {
+            throw new GameHasPurchasesException(id);
+        }
     }
 
     private GameResponse toResponse(
