@@ -63,6 +63,10 @@ class AdminBootstrapTest {
     void shouldSkipWhenUsernameIsTaken() {
         when(userRepository.countByRole(UserRole.ADMIN)).thenReturn(0L);
         when(userRepository.existsByUsername(USERNAME)).thenReturn(true);
+
+        bootstrap(PASSWORD).run(null);
+
+        verify(userRepository, never()).save(any());
     }
 
     @Test

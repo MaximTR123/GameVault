@@ -101,11 +101,11 @@ public class GameService {
                                 new GameNotFoundException(id)
                 );
 
-        gameRepository.delete(game);
-
         if(purchaseRepository.existsByGameId(id)) {
             throw new GameHasPurchasesException(id);
         }
+
+        gameRepository.delete(game);
     }
 
     private GameResponse toResponse(

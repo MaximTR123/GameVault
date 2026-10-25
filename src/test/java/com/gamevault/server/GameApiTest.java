@@ -390,7 +390,7 @@ class GameApiTest extends ApiTestBase{
         long gameId = createAvailableGame();
 
         JsonNode games = objectMapper.readTree(send(
-                "POST",
+                "GET",
                 "/api/games",
                 null,
                 null
